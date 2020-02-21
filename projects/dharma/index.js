@@ -240,20 +240,14 @@
       let daiAddress = "***REMOVED***";
       let dharmaUSDCAddress = "0x00000000008943c65cAf789FFFCF953bE156f6f8";
       let usdcAddress = "***REMOVED***";
-      let balanceOfUnderlyingABI = {
+      let totalSupplyUnderlyingABI = {
         "constant": true,
-        "inputs": [
-          {
-            "internalType": "address",
-            "name": "account",
-            "type": "address"
-          }
-        ],
-        "name": "balanceOfUnderlying",
+        "inputs": [],
+        "name": "totalSupplyUnderlying",
         "outputs": [
           {
             "internalType": "uint256",
-            "name": "underlyingBalance",
+            "name": "dTokenTotalSupplyInUnderlying",
             "type": "uint256"
           }
         ],
@@ -267,7 +261,7 @@
       let dharmaDaiUnderlyingBalance = (await sdk.api.abi.call({
         block,
         target: dharmaDaiAddress,
-        abi: balanceOfUnderlyingABI
+        abi: totalSupplyUnderlyingABI
       })).output;
 
       if (dharmaDaiUnderlyingBalance.success) {
@@ -282,7 +276,7 @@
       let dharmaUSDCUnderlyingBalance = (await sdk.api.abi.call({
         block,
         target: dharmaUSDCAddress,
-        abi: balanceOfUnderlyingABI
+        abi: totalSupplyUnderlyingABI
       })).output;
 
       if (dharmaUSDCUnderlyingBalance.success) {
