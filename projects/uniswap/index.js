@@ -3,8 +3,8 @@ const BigNumber = require('bignumber.js')
 const v1TVL = require('./v1')
 const v2TVL = require('./v2')
 
-const ETH = '0x0000000000000000000000000000000000000000'
-const WETH = '***REMOVED***'
+const ETH = '0x0000000000000000000000000000000000000000'.toLowerCase()
+const WETH = '***REMOVED***'.toLowerCase()
 
 async function tvl(_, block) {
   const [v1, v2] = await Promise.all([v1TVL(_, block), v2TVL(_, block)])
