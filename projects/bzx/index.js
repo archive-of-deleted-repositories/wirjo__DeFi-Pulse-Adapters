@@ -21,9 +21,10 @@
       params: [0,200,0],
       abi: abi["getTokens"]
     });
-
+    // for when staking is ready
     let bzrxTokenAddress = "***REMOVED***";
     let vbzrxTokenAddress = "***REMOVED***";
+    
     let iTokens = [
       // sUSD
       {
