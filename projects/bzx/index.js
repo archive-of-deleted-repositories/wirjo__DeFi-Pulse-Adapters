@@ -7,12 +7,10 @@ const BigNumber = require('bignumber.js');
 const _ = require('underscore');
 
 const abi = require('./abi');
+const registry = require('./registry');
 const itoken = require('./itoken');
 const { sum } = require('../../sdk/util');
 
-/*==================================================
-  Main
-  ==================================================*/
 
 let iTokens = [
   // sUSD
@@ -27,53 +25,7 @@ let iTokens = [
   },
 ];
 
-let iTokensNew = [
-  // Those are new iTokens
-  { // Fulcrum DAI iToken
-    iTokenAddress: "***REMOVED***",
-    underlyingAddress: "***REMOVED***"
-  },
-  { // Fulcrum ETH iToken
-    iTokenAddress: "***REMOVED***",
-    underlyingAddress: "***REMOVED***"
-  },
-  { // Fulcrum USDC iToken
-    iTokenAddress: "***REMOVED***",
-    underlyingAddress: "***REMOVED***"
-  },
-  { // Fulcrum WBTC iToken
-    iTokenAddress: "***REMOVED***",
-    underlyingAddress: "***REMOVED***"
-  },
-  { // Fulcrum LEND iToken
-    iTokenAddress: "***REMOVED***",
-    underlyingAddress: "0x80fB784B7eD66730e8b1DBd9820aFD29931aab03"
-  },
-  { // Fulcrum KNC iToken
-    iTokenAddress: "***REMOVED***",
-    underlyingAddress: "0xdd974d5c2e2928dea5f71b9825b8b646686bd200"
-  },
-  { // Fulcrum MKR iToken
-    iTokenAddress: "***REMOVED***",
-    underlyingAddress: "0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2"
-  },
-  { // Fulcrum BZRX iToken
-    iTokenAddress: "***REMOVED***",
-    underlyingAddress: "***REMOVED***"
-  },
-  { // Fulcrum LINK iToken
-    iTokenAddress: "***REMOVED***",
-    underlyingAddress: "0x514910771AF9Ca656af840dff83E8264EcF986CA"
-  },
-  { // Fulcrum YFI iToken
-    iTokenAddress: "***REMOVED***",
-    underlyingAddress: "0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e"
-  },
-  { // Fulcrum USDT iToken
-    iTokenAddress: "***REMOVED***",
-    underlyingAddress: "***REMOVED***"
-  }
-]
+let iTokensNew = [];
 
 let bzrxTokenAddress = "***REMOVED***";
 let vbzrxTokenAddress = "***REMOVED***";
@@ -82,18 +34,26 @@ let bzxProtocolAddress = "0xd8ee69652e4e4838f2531732a46d1f7f584f0b7f";
 // TODO for future staking
 let bzxStakingAddress = "0x576773CD0B51294997Ec4E4ff96c93d5E3AE9038";
 
+let legacyRegistryContractAddress = "0xD8dc30d298CCf40042991cB4B96A540d8aFFE73a";
+let registryContractAddress = "0xf0E474592B455579Fe580D610b846BdBb529C6F7";
+
 let mkrAddress = "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2";
+
+/*==================================================
+  Main
+  ==================================================*/
+
 async function tvl(timestamp, block) {
   let balances = {};
 
-  const getTokensResult = await sdk.api.abi.call({
+  const getTokensResultLegacy = await sdk.api.abi.call({
     block,
-    target: '0xD8dc30d298CCf40042991cB4B96A540d8aFFE73a',
+    target: legacyRegistryContractAddress,
     params: [0, 200, 0],
     abi: abi["getTokens"]
   });
 
-  _.each(getTokensResult.output, (token) => {
+  _.each(getTokensResultLegacy.output, (token) => {
     if (token[4] === '1') {
       iTokens.push({
         iTokenAddress: token[0],
@@ -102,6 +62,19 @@ async function tvl(timestamp, block) {
     }
   });
 
+  const getTokensResult = await sdk.api.abi.call({
+    block,
+    target: registryContractAddress,
+    params: [0, 200],
+    abi: registry["getTokens"]
+  });
+
+  _.each(getTokensResult.output, (token) => {
+    iTokensNew.push({
+      iTokenAddress: token[0],
+      underlyingAddress: token[1]
+    });
+  });
 
   iTokens = iTokens.concat(iTokensNew);
   const iTokenCalls = _.map(iTokens, (iToken) => ({
@@ -167,7 +140,7 @@ async function tvl(timestamp, block) {
     abi: 'erc20:balanceOf',
     block
   });
-  console.log("balanceOfvBZRX", balanceOfvBZRX);
+
   function sumMultiBalanceOf(balances, results) {
     _.each(results.output, (result) => {
       if (result.success) {
@@ -190,8 +163,6 @@ async function tvl(timestamp, block) {
     balances[bzrxTokenAddress.toUpperCase()] = BigNumber(balances[bzrxTokenAddress.toUpperCase()]).plus(balance).toFixed();
   }
 
-
-  console.log("json ", balances);
   return balances;
 }
 
@@ -249,7 +220,6 @@ async function rates(timestamp, block) {
     ratesData.supply[symbol.output] = String(totalBorrow.output);
   });
 
-  console.log("ratesData", ratesData);
   return ratesData;
 }
 
