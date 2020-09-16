@@ -10,5 +10,5 @@ module.exports = {
       abi: 'erc20:totalSupply'
     }
   ],
-  projectId: '***REMOVED***'
+  projectId: 'fce88319535826b883103e26ae2f262f7a0776a6d4f23b6ceace35795d4d'
 };
