@@ -3,6 +3,7 @@
   ==================================================*/
 
   const sdk = require('../../sdk');
+  const abi = require('./abi.json');
 
 /*==================================================
   TVL
@@ -17,20 +18,28 @@
     'fRENBTC':     {underlying: 'RENBTC', decimals: 8, contract: '0xfBe122D0ba3c75e1F7C80bd27613c9f35B81FEeC', created: 10802986 },
     'fCRVRENWBTC': {underlying: 'CRVRENWBTC', decimals: 18, contract: '0x192E9d29D43db385063799BC239E772c3b6888F3', created: 10815917 },
   };
-  
-  const fABISharePrice = {"constant":true,"inputs":[],"name":"getPricePerFullShare","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"};
-  const fABIUnderlyingUnit = {"constant":true,"inputs":[],"name":"underlyingUnit","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"};
 
   async function tvl(timestamp, block) {
+    const promises = [
+      getUnderlying('fWETH',block),
+      getUnderlying('fDAI',block),
+      getUnderlying('fUSDC',block),
+      getUnderlying('fUSDT',block),
+      getUnderlying('fWBTC',block),
+      getUnderlying('fRENBTC',block),
+    ];
+
+    let results = await Promise.all(promises);
+
 
     let balances = {
-      '***REMOVED***': (await getUnderlying('fWETH',block)),   // WETH
-      '***REMOVED***': (await getUnderlying('fDAI',block)),    // DAI
-      '***REMOVED***': (await getUnderlying('fUSDC',block)),   // USDC
-      '***REMOVED***': (await getUnderlying('fUSDT',block)),   // USDT
-      '***REMOVED***': (await getUnderlying('fWBTC',block)),   // WBTC
-      '0xEB4C2781e4ebA804CE9a9803C67d0893436bB27D': Math.trunc(await getUnderlying('fRENBTC',block))  // RENBTC
-                                                      + Math.trunc(await getUnderlying('fRENBTC',block)), //crvRENWBTC, estimate
+      '***REMOVED***': results[0],   // WETH
+      '***REMOVED***': results[1],    // DAI
+      '***REMOVED***': results[2],   // USDC
+      '***REMOVED***': results[3],   // USDT
+      '***REMOVED***': results[4],   // WBTC
+      '0xEB4C2781e4ebA804CE9a9803C67d0893436bB27D': Math.trunc(results[5])  // RENBTC
+                                                      + Math.trunc(results[5]), //crvRENWBTC, estimate
       // TODO Uniswap LP underlying
     };
 
@@ -39,11 +48,21 @@
 
   async function getUnderlying(token, block) {
     if (block > fTokens[token].created) {
-      let fBalance = (await sdk.api.abi.call({block, target: fTokens[token].contract, abi: 'erc20:totalSupply', })).output;
-      let fSharePrice = (await sdk.api.abi.call({block, target: fTokens[token].contract, abi: fABISharePrice, })).output;
-      let fUnderlyingUnit = (await sdk.api.abi.call({block, target: fTokens[token].contract, abi: fABIUnderlyingUnit, })).output;
+      const promises = [
+        sdk.api.abi.call({ block, target: fTokens[token].contract, abi: 'erc20:totalSupply', }),
+        sdk.api.abi.call({ block, target: fTokens[token].contract, abi: abi['fABISharePrice'], }),
+        sdk.api.abi.call({ block, target: fTokens[token].contract, abi: abi['fABIUnderlyingUnit'], })
+      ];
+
+      let results = await Promise.all(promises);
+
+      let fBalance = results[0].output;
+      let fSharePrice = results[1].output;
+      let fUnderlyingUnit = results[2].output;
+
       return fBalance * fSharePrice / fUnderlyingUnit;
     }
+
     return 0;
 }
 
@@ -58,4 +77,4 @@
     category: 'assets',       // allowed values as shown on DefiPulse: 'Derivatives', 'DEXes', 'Lending', 'Payments', 'Assets'
     start: 1598893200,        // unix timestamp (utc 0) specifying when the project began, or where live data begins
     tvl                       // tvl adapter
-  }
+  };
