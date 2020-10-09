@@ -2,91 +2,31 @@
   Modules
   ==================================================*/
 
-  const sdk = require('../../sdk');
-  const _ = require('underscore');
+  const v1TVL = require('./v1');
+  const v2TVL = require('./v2');
+
   const BigNumber = require('bignumber.js');
-
-/*==================================================
-  Settings
-  ==================================================*/
-
-  const cTokenDecimalScale = BigNumber("10").pow(18);
-
-  const tokens = [
-    '***REMOVED***', // WETH
-    '***REMOVED***', // WBTC
-    '0x514910771AF9Ca656af840dff83E8264EcF986CA', // LINK
-    '***REMOVED***', // SAI
-    '***REMOVED***', // DAI
-    '***REMOVED***', // USDC
-    '***REMOVED***', // cUSDC
-    '0x5d3a536e4d6dbd6114cc1ead35777bab948e3643', // cDAI
-  ]
-
-  const cTokensMap = {
-    '***REMOVED***': '***REMOVED***', // cUSDC: USDC
-    '0x5d3a536e4d6dbd6114cc1ead35777bab948e3643': '***REMOVED***'  // cDAI: DAI
-  }
 
 /*==================================================
   TVL
   ==================================================*/
 
   async function tvl(timestamp, block) {
-    let balances = {};
+    const [v1, v2] = await Promise.all([v1TVL(timestamp, block), v2TVL(timestamp, block)]);
 
-    // Vault Asset Balances
-    let balanceOfResults = await sdk.api.abi.multiCall({
-      block,
-      calls: _.map(tokens, (token) => {
-        return {
-          target: token,
-          params: '0x5B67871C3a857dE81A1ca0f9F7945e5670D986Dc'
-        }
-      }),
-      abi: 'erc20:balanceOf'
-    });
+    const tokenAddresses = new Set(Object.keys(v1).concat(Object.keys(v2)));
 
-    // cToken Exchange Rates
-    let cTokenConversionRatesMap = (await sdk.api.abi.multiCall({
-      block,
-      calls: _.map(Object.keys(cTokensMap), (cToken) => {
-        return {
-          target: cToken
-        }
-      }),
-      abi: {
-        "constant": true,
-        "inputs": [],
-        "name": "exchangeRateStored",
-        "outputs": [
-          {
-            "name":"",
-            "type":"uint256"
-          }
-        ]
-      }
-    })).output.reduce(function(map, object) {
-      map[object.input.target] = object.output;
-      return map;
-    }, {});
+    const balances = (
+      Array
+        .from(tokenAddresses)
+        .reduce((accumulator, tokenAddress) => {
+          const v1Balance = new BigNumber(v1[tokenAddress] || '0');
+          const v2Balance = new BigNumber(v2[tokenAddress] || '0');
+          accumulator[tokenAddress] = v1Balance.plus(v2Balance).toFixed();
 
-    // Compute Balances
-    _.each(balanceOfResults.output, (balanceOf) => {
-      if(balanceOf.success) {
-        let address = balanceOf.input.target
-
-        if (address in cTokensMap) {
-          let addressOfUnderlying = cTokensMap[address];
-          let conversionRate = BigNumber(cTokenConversionRatesMap[address]);
-          let balanceOfUnderlying = BigNumber(balanceOf.output).times(conversionRate).div(cTokenDecimalScale);
-
-          balances[addressOfUnderlying] = BigNumber(balances[addressOfUnderlying] || 0).plus(balanceOfUnderlying).toFixed();
-        } else {
-          balances[address] = BigNumber(balances[address] || 0).plus(balanceOf.output).toFixed();
-        }
-      }
-    });
+          return accumulator
+        }, {})
+    );
 
     return balances;
   }
