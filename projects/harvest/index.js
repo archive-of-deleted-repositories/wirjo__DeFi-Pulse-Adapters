@@ -80,9 +80,9 @@
     let results = await Promise.all(promises);
 
     let balances = {
-      '***REMOVED***': results[0] + results[16]       // WETH
-              + results[8][1] + results[9][1] + results[10][0] + results[11][1]    // WETH UNIv0
-              + results[12][1] + results[13][1] + results[14][0] + results[15][1], // WETH UNI
+      '***REMOVED***': (results[0] || 0) + (results[16] || 0)                    // WETH
+              + (results[8][1] || 0) + (results[9][1] || 0) + (results[10][0] || 0) + (results[11][1] || 0)   // WETH UNIv0
+              + (results[12][1] || 0) + (results[13][1] || 0) + (results[14][0] || 0) + (results[15][1] || 0), // WETH UNI
       '***REMOVED***': results[1] + results[17]       // DAI
               + results[8][0]                                                      // DAI UNIv0
               + results[12][0],                                                    // DAI UNI
