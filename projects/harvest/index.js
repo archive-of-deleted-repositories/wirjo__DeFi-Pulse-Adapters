@@ -4,6 +4,8 @@
 
   const sdk = require('../../sdk');
   const abi = require('./abi.json');
+  const BigNumber = require('bignumber.js');
+  const ERROR = BigNumber("3963877391197344453575983046348115674221700746820753546331534351508065746944");
 
 /*==================================================
   TVL
@@ -80,27 +82,35 @@
     let results = await Promise.all(promises);
 
     let balances = {
-      '***REMOVED***': (results[0] || 0) + (results[16] || 0)                    // WETH
-              + (results[8][1] || 0) + (results[9][1] || 0) + (results[10][0] || 0) + (results[11][1] || 0)   // WETH UNIv0
-              + (results[12][1] || 0) + (results[13][1] || 0) + (results[14][0] || 0) + (results[15][1] || 0), // WETH UNI
-      '***REMOVED***': results[1] + results[17]       // DAI
-              + results[8][0]                                                      // DAI UNIv0
-              + results[12][0],                                                    // DAI UNI
-      '***REMOVED***': results[2] + results[18]       // USDC
-              + results[9][0]                                                      // USDC UNIv0
-              + results[13][0],                                                    // USDC UNI
-      '***REMOVED***': results[3] + results[19]       // USDT
-              + results[10][1]                                                     // USDT UNIv0
-              + results[14][1],                                                    // USDT UNI
-      '0x0000000000085d4780B73119b644AE5ecd22b376': results[4],                    // TUSD
-      '***REMOVED***': results[5] + results[20]       // WBTC
-              + results[11][0]                                                     // WBTC UNIv0
-              + results[15][0]                                                     // WBTC UNI
-              + results[23][0]*Math.pow(10,-10) + results[23][1]*Math.pow(10,-10), // WBTC SUSHI
-      '0xEB4C2781e4ebA804CE9a9803C67d0893436bB27D': results[6]                     // RENBTCv0
-              + results[21]                                                        // RENBTC
-              + results[7]*Math.pow(10,-10)                                        // crvRENWBTCv0, estimate
-              + results[22]*Math.pow(10,-10),                                      // crvRENWBTC, estimate
+      '***REMOVED***': BigNumber(results[0]).plus(results[16])        // WETH
+              .plus(results[8][1]).plus(results[9][1]).plus(results[10][0]).plus(results[11][1])   // WETH UNIv0
+              .plus(results[12][1]).plus(results[13][1]).plus(results[14][0]).plus(results[15][1]) // WETH UNI
+              .toFixed(18),
+      '***REMOVED***': BigNumber(results[1]).plus(results[17])        // DAI
+              .plus(results[8][0])                                                    // DAI UNIv0
+              .plus(results[12][0])                                                   // DAI UNI
+	      .toFixed(18),
+      '***REMOVED***': BigNumber(results[2]).plus(results[18])        // USDC
+              .plus(results[9][0])                                                    // USDC UNIv0
+              .plus(results[13][0])                                                   // USDC UNI
+	      .toFixed(6),
+      '***REMOVED***': BigNumber(results[3]).plus(results[19])        // USDT
+              .plus(results[10][1])                                                   // USDT UNIv0
+              .plus(results[14][1])                                                   // USDT UNI
+	      .toFixed(6),
+      '0x0000000000085d4780B73119b644AE5ecd22b376': BigNumber(results[4])             // TUSD
+	      .toFixed(18),
+      '***REMOVED***': BigNumber(results[5]).plus(results[20])        // WBTC
+              .plus(results[11][0])                                                   // WBTC UNIv0
+              .plus(results[15][0])                                                   // WBTC UNI
+              .plus(BigNumber(results[23][0]).times(BigNumber("10").pow(-10)))        // WBTC SUSHI
+	      .plus(BigNumber(results[23][1]).times(BigNumber("10").pow(-10)))
+	      .toFixed(8),                                                            // TBTC SUSHI
+      '0xEB4C2781e4ebA804CE9a9803C67d0893436bB27D': BigNumber(results[6])             // RENBTCv0
+              .plus(results[21])                                                      // RENBTC
+              .plus(BigNumber(results[7]).times(BigNumber("10").pow(-10)))            // crvRENWBTCv0, estimate
+              .plus(BigNumber(results[22]).times(BigNumber("10").pow(-10)))           // crvRENWBTC, estimate
+	      .toFixed(8),
        // TODO attribute TBTC when supported
     };
 
@@ -117,13 +127,14 @@
 
       let results = await Promise.all(promises);
 
-      let fBalance = results[0].output;
-      let fSharePrice = results[1].output;
-      let fUnderlyingUnit = results[2].output;
+      let fBalance = BigNumber(results[0].output);
+      let fSharePrice = BigNumber(results[1].output);
+      let fUnderlyingUnit = BigNumber(results[2].output);
 
-      return fBalance * fSharePrice / fUnderlyingUnit;
+      if (!fSharePrice.isEqualTo(ERROR)) {
+        return fBalance.times(fSharePrice).div(fUnderlyingUnit);
+      }
     }
-
     return 0;
 }
 
@@ -140,14 +151,17 @@ async function getUniswapUnderlying(token,block) {
 
     let results = await Promise.all(promises);
 
-    let poolBalance = results[0].output;
-    let poolSharePrice = results[1].output;
-    let poolUnderlyingUnit = results[2].output;
-    let poolUnderlyingBalance = results[3].output;
-    let poolUnderlyingReserves = results[4].output;
-    let poolFraction = (poolBalance * poolSharePrice / poolUnderlyingUnit) / poolUnderlyingBalance;
+    let poolBalance = BigNumber(results[0].output);
+    let poolSharePrice = BigNumber(results[1].output);
+    let poolUnderlyingUnit = BigNumber(results[2].output);
+    let poolUnderlyingBalance = BigNumber(results[3].output);
+    let poolUnderlyingReservesToken0 = BigNumber(results[4].output[0]);
+    let poolUnderlyingReservesToken1 = BigNumber(results[4].output[1]);
+    let poolFraction = poolBalance.times(poolSharePrice).div(poolUnderlyingUnit).div(poolUnderlyingBalance);
 
-    return [poolFraction * poolUnderlyingReserves[0], poolFraction * poolUnderlyingReserves[1]];
+    if (!poolFraction.isNaN() && !poolSharePrice.isEqualTo(ERROR)) {
+      return [ poolFraction.times(poolUnderlyingReservesToken0), poolFraction.times(poolUnderlyingReservesToken1) ];
+    }
   }
 
   return [0, 0];
