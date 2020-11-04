@@ -44,14 +44,19 @@
       abi: 'erc20:balanceOf'
     });
 
-    sdk.util.sumMultiBalanceOf(balances, balanceOfResults);
+    _.each(balanceOfResults.output, (balanceOf) => {
+      if(balanceOf.success) {
+        let address = balanceOf.input.target
+        balances[address] = BigNumber(balances[address] || 0).plus(balanceOf.output).toFixed();
+      }
+    });
 
     for(let pool of pools) {
       let balance = (await sdk.api.eth.getBalance({target: pool, block})).output;
       balances['0x0000000000000000000000000000000000000000'] = BigNumber(balances['0x0000000000000000000000000000000000000000'] || 0).plus(balance).toFixed();
     }
 
-    return balances;
+    return (await sdk.api.util.toSymbols(balances)).output;
   }
 
 /*==================================================
@@ -61,7 +66,7 @@
   module.exports = {
     name: 'Nexus Mutual',
     token: 'NXM',
-    category: 'derivatives',
+    category: 'Derivatives',
     start: 1558569600, // 05/23/2019 @ 12:00am (UTC)
     tvl
   }
