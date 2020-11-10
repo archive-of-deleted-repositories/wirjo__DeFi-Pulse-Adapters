@@ -73,6 +73,9 @@ const utility = {
 }
 
 async function tvl(timestamp, block) {
+   let point = await sdk.api.util.lookupBlock(timestamp);
+  timestamp = point.timestamp
+  block = point.block
   let balances = {
     '0x000000000000000000000000000000000000000E': "0",// ETH
     '***REMOVED***': "0",// DAI
